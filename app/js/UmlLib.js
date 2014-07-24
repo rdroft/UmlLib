@@ -18,119 +18,124 @@
      * @param {Number} [params.fontSize]
      * @param {String} [colour scheme]
      */
-    var RenderedData = function(params){
-        this.getDefault = function(){
+    var RenderedData = {
+        getDefault: function(){
             return {x:10,y:10,width:100,height:20};
-        };
+        }
     };
 
     var Renderer = function($factory,$rootRenderer){
-         this.draw = function(obj,obj_view){}
+         this.draw = function(obj,ld){}
     };
 
-    var LayoutRenderer = function($factory,$rootRenderer,diagram){
-        this.initLayout=function(diagram){
-
-        }(diagram);
+    var Layout = function(){
+        var map=[]; //LayoutData hire
+        this.getById=function(id){
+            return map[id];
+        };
+        this.add=function(root){
+            for (var j=0;j<root.leafs.length;j++){
+               if(root.leafs[j].rendererData===undefined){
+                 map[j]= RenderedData.getDefault();
+               }else{
+                  map[j] = root.leafs[j].rendererData;
+               }
+            }
+        };
+        this.layout=function(){}
     };
 
-    var RendererFactory =function(ctx){
-        var renderes={};
+    var LayoutRenderer = function(ctx,config){
+        this.activeCtx=ctx;
+        this.canvasConfig = config;
+        this.rendererFactory = new RendererFactory(this);
+        this.layout = new Layout();
+        this.drawGrid =function(ctx,width,height){
+            var grid_size=50;
+            var pix_s=0.5;
+            var caption ={};
+            caption.x=0;
+            caption.y=0;
+            caption.h = 18.5;
+            caption.w1=150.5;
+            caption.w2=163.5;
+            //print grid
+            ctx.lineWidth=0.4;
+            for(var j =0;j < (height/grid_size);j++){
+                ctx.moveTo(pix_s,j*grid_size+pix_s);
+                ctx.lineTo(width-1.5,j*grid_size+pix_s);
+            };
+            for(var j =0;j <(width/grid_size);j++){
+                ctx.moveTo(j*grid_size+pix_s,pix_s);
+                ctx.lineTo(j*grid_size+pix_s,height);
+            };
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.fillStyle = 'white';
+            ctx.moveTo(caption.x,caption.h);
+            ctx.lineTo(caption.w1,caption.h);
+            ctx.lineTo(caption.w2,caption.y);
+            ctx.lineTo(caption.x,caption.y);
+            ctx.lineTo(caption.x,caption.h);
+            ctx.fill();
+            ctx.lineWidth=1;
+            ctx.fillStyle = 'black';
+            ctx.stroke();
+        }(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height);
+
+        this.draw=function(rootObject){
+            ctx.font = "15px Georgia";
+            ctx.fillText(rootObject.type+' '+rootObject.name,12.5,13.5);
+            this.drawLeafs(rootObject);
+        };
+
+        this.drawLeafs=function(rootObject){
+            for(var j =0;j<rootObject.leafs.length;j++){
+               var obj = rootObject.leafs[j];
+               var renderer = this.rendererFactory.getRenderer(obj.rendererName);
+               renderer.draw(obj,this.layout.getById(j),this.activeCtx);
+            }
+        };
+
+        this.setDiagram = function(digram){
+            this.layout.add(digram);
+            this.draw(digram);
+        };
+    };
+
+    var RendererFactory =function($rootRenderer){
+        var renders={};
+        var rootRenderer = $rootRenderer;
         this.getRenderer=function(name){
-            return renderes[name];
+            return renders[name];
         };
         this.addRenderer=function(name,renderer){
-            console.log('add renderer: '+name);
-            renderes[name]= new renderer(this);
+            renders[name]= new renderer(this,rootRenderer);
         };
-    };
-
-    var RendererFactory1 =function(){
-        var renderes={};
-        var pix_s=0.5;
-        /**Return renderer for object
-         * @param {String} [name] name for corresponding renderer
-         * */
-        this.getRenderer=function(name){
-            return renderes[name];
-        };
-        this.addRenderer=function(name,renderer){
-            console.log('add renderer: '+name);
-            renderes[name]=renderer;
-        };
-
-        this.__init=function(){
-            this.addRenderer('Diagram',{
-                draw:function(object,ctx,gd,info){
-                    var grid_size=50;
-                    var caption ={};
-                    caption.x=0;
-                    caption.y=0;
-                    caption.h = 18.5;
-                    caption.w1=150.5;
-                    caption.w2=163.5;
-                    //print grid
-                    ctx.lineWidth=0.4;
-                    for(var j =0;j < (info.height/grid_size);j++){
-                        ctx.moveTo(pix_s,j*grid_size+pix_s);
-                        ctx.lineTo(info.width-1.5,j*grid_size+pix_s);
-                    };
-                    for(var j =0;j <(info.width/grid_size);j++){
-                        ctx.moveTo(j*grid_size+pix_s,pix_s);
-                        ctx.lineTo(j*grid_size+pix_s,info.height);
-                    };
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.fillStyle = 'white';
-                    ctx.moveTo(caption.x,caption.h);
-                    ctx.lineTo(caption.w1,caption.h);
-                    ctx.lineTo(caption.w2,caption.y);
-                    ctx.lineTo(caption.x,caption.y);
-                    ctx.lineTo(caption.x,caption.h);
-                    ctx.fill();
-                    ctx.lineWidth=1;
-                    ctx.fillStyle = 'black';
-                    ctx.stroke();
-                    ctx.font = "15px Georgia";
-                    ctx.fillText(object.type+' '+object.name,12.5,13.5);
-                    for(var obj in object.leafs){
-                        var child = object.leafs[obj];
-                        if(name !=undefined){
-                            var renderer = renderes[child.rendererName];
-                            renderer.draw(child,ctx,child.rendererData,info);
-                        }
-                    }
-
-                }
-            });
-
-            this.addRenderer('BaseObject',{
-                 draw:function(object,ctx,gd,info){
-                    console.log('BaseCalled');
-                    ctx.fillText(object.name,gd.x+10.5,gd.y+14.5);
-                    ctx.strokeRect(gd.x,gd.y,gd.width,gd.height);
-                    if(object.leafs!=undefined){
-                       //call attribute renderer
-                        for(var i in object.leafs){
-
-                        }
+        this.addRenderer('BaseObject',function(factory,root){
+            this.draw = function(obj,gd,ctx) {
+                console.log('BaseCalled');
+                ctx.fillText(obj.name, gd.x + 10.5, gd.y + 14.5);
+                ctx.strokeRect(gd.x, gd.y, gd.width, gd.height);
+                if (obj.leafs != undefined) {
+                    //call attribute renderer
+                    for (var i in obj.leafs) {
                     }
                 }
-            });
-
-            this.addRenderer('Connector',new function(){
-                this.draw = function(object,ctx,gd,info){
-                  var frd = object.from.rendererData;
-                  var trd = object.to.rendererData;
-                  ctx.beginPath();
-                  ctx.moveTo(frd.x+frd.width/2,(frd.y+frd.height));
-                  ctx.lineTo(trd.x+trd.width/2,trd.y);
-                  ctx.stroke();
-                };
-            });
-        };
-        this.__init();
+            };
+        });
+        this.addRenderer('Connector',function(factory,root){
+            this.draw = function(obj,gd,ctx){
+                var frd = obj.from.rendererData;
+                var trd = obj.to.rendererData;
+                ctx.beginPath();
+                ctx.moveTo(frd.x+frd.width/2,(frd.y+frd.height));
+                ctx.lineTo(trd.x+trd.width/2,trd.y);
+                ctx.stroke();
+            };
+        });
     };
+
     global.UmlLib = {
         /**
          * @constructor
@@ -144,13 +149,7 @@
             var rootElement;
             var activeCanvas;
             var actx;
-            /**
-             * Renderer Factory
-             * created to decouple Renderer and UML object itself
-             * objects has a textural reference to Renderer and RendererData
-             * Partial Renderer should know how to render object
-             * */
-            var rendererFactory = new RendererFactory1();
+            var rootRenderer;
             function getElement(elementId){
                 return document.getElementById(elementId);
             };
@@ -171,13 +170,12 @@
                 rootElement = getElement(params.containerId);
                 activeCanvas = bindCanvas(params,rootElement);
                 actx = initializeContext(activeCanvas);
+                rootRenderer = new LayoutRenderer(actx,{width:activeCanvas.width,height:activeCanvas.height});
             }(params);
             this.diagram = undefined;
             this.showDiagram=function(diagram){
                 this.diagram = diagram;
-                //object,ctx,gd,info
-                var renderer = rendererFactory.getRenderer('Diagram');
-                renderer.draw(diagram,actx,undefined,{width:activeCanvas.width,height:activeCanvas.height});
+                rootRenderer.setDiagram(diagram);
             };
         },
         /**
@@ -193,6 +191,7 @@
             this.rendererName='BaseObject';
             this.name="Empty";
             this.rendererData={};
+            this.leafs = [];
             this.__init =function(params){
                 this.rendererData = (params.rendererData||{x:50,y:50,width:150,height:40});
                 if(params.name!=undefined) {
