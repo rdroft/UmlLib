@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <script src="js/UmlLib.js"></script>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<div class="header" style="margin-top:30px;">
+    <h3>Diagram</h3>
+</div>
+<div class="body" style="margin-left: 80px;">
+
+    <div id="diagram"></div>
+</div>
+<script>
+
+    var parent = function (){
+       this.list = [];
+       this.__init=function(){
+           console.log("init parenet");
+       };
+       this.addObject = function(object){
+            this.list.push(object);
+       };
+    };
+//    var child = function(){};
+//
+//    child.prototype = new parent();
+//    child.prototype.constructor = child;
+//    var c = new child();
+//    c.addObject('one');
+    var printProps=function(pref,c) {
+        console.log('props of:'+c)
+        for (var p in c) {
+            console.log(pref+": " + p+"  "+c[p]);
+        }
+    };
+////
+    var seq = new UmlLib.Diagram({name:"A1"});
+    var a1 = new UmlLib.UObject({name:'Main Object'});
+    var a2 = new UmlLib.UObject({name:'Child Object 2',rendererData:{x:150,y:125,width:123,height:23}});
+    var a3 = new UmlLib.UObject({name:'Child Object 1',rendererData:{x:5,y:125,width:123,height:23}});
+    seq.addObject(a1);
+    seq.addObject(a2);
+    seq.addObject(a3);
+    seq.addObject(new UmlLib.Connector(a1,a2));
+    seq.addObject(new UmlLib.Connector(a1,a3));
+    printProps('seq',seq)
+    var view = new UmlLib.View({containerId:'diagram',width:1001,height:3401});
+    view.showDiagram(seq);
+
+</script>
+</body>
+</html>
