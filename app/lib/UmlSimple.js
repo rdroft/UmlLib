@@ -109,6 +109,7 @@ function Diagram(config) {
         this.doubleclick=function(event){
             var pos = this.getMousePosition(event);
             var uobj = this.findUObject(pos);
+
             if (uobj != undefined) {
                 console.log("object selected:"+uobj.obj.id+" pos:"+uobj.pos);
                 uobj.obj.isDragged = false;

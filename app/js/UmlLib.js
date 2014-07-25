@@ -3,6 +3,12 @@
  */
 'use strict';
 (function(global){
+
+    var Font ={
+        a1:'Georgia, serif',
+        a2:'Times New Roman',
+        a3:'Comic Sans MS'
+    };
     /**
      * @param {Number} [params.x]
      * @param {Number} [params.y]
@@ -28,13 +34,13 @@
      * */
     var Layout = function(){
         var map=[]; //LayoutData hire
-        var leafs=undefined;
+        var leafs=[];
         var draggedObjectId=undefined;
         this.getById=function(id){
             return map[id];
         };
         this.add=function(root){
-            this.leafs = root.leafs;
+            leafs = root.leafs;
             for (var j=0;j<root.leafs.length;j++){
                if(root.leafs[j].rendererData===undefined){
                  map[j]= RenderedData.getDefault();
@@ -51,22 +57,25 @@
         }
         this.getPlaceLocationFor=function(x,y,w,h){};
         this.getGP = function(x,y){
-            for(x in map){
-                var gd = map[x];
-                if(gd.x <= x <=gd.x+gd.width){
-                    if(gd.y <=y<=gd.y+gd.height){
-                        return map[x];
+            for(var v in map){
+                var gd = map[v];
+                if(gd.x <= x&&x <=gd.x+gd.width){
+                    if(gd.y<=y&&y<=(gd.y+gd.height)){
+                        map[v].ox = x-gd.x;
+                        map[v].oy = y-gd.y;
+                        return map[v];
                     }
                 }
             }
             return undefined;
         };
+
         this.getObject = function(x,y){
-           for(x in map){
-               var gd = map[x];
-               if(gd.x <= x <=gd.x+gd.width){
-                   if(gd.y <=y<=gd.y+gd.height){
-                       return leafs[x];
+           for(var v=0;v<map.length;v++){
+               var gd = map[v];
+               if(gd.x <= x&&x <=gd.x+gd.width){
+                   if(gd.y<=y&&y<=(gd.y+gd.height)){
+                       return leafs[v];
                    }
                }
            }
@@ -120,7 +129,7 @@
             ctx.stroke();
         };
         this.draw=function(rootObject){
-            ctx.font = "15px Georgia";
+            ctx.font = '15px '+Font.a3;
             ctx.fillText(rootObject.type+' '+rootObject.name,12.5,13.5);
             this.drawLeafs(rootObject);
         };
@@ -236,6 +245,37 @@
             function getElement(elementId){
                 return document.getElementById(elementId);
             };
+
+            function createElement(obj,x,y,w){
+                var el=document.createElement('input');
+                el.type='text';
+                el.value=obj.name;
+                el.style.position='absolute';
+                el.style.top=y+70+'px';
+                el.style.left=x+90+'px';
+                el.style.width=(w-10)+'px';
+                el.addEventListener('keyup',function(event){
+                    if(event.keyCode==13||event.which==13){
+                        obj.name=el.value;
+                        console.log("redr");
+                        var cte = document.getElementById(rootElement.id);
+                        if(cte){
+                            el.somef=true;
+                            cte.removeChild(el);
+                        }
+
+                    }
+                }.bind(this));
+                el.addEventListener('blur',function(event){
+                    obj.name=el.value;
+                    console.log('blur');
+                    if(!el.somef){
+                        document.getElementById(rootElement.id).removeChild(el);
+                    }
+                }.bind(this));
+                document.getElementById(rootElement.id).appendChild(el);
+                el.focus();
+            }
             function bindCanvas(params,parent){
                 var canvas = document.createElement("canvas");
                 canvas.width = params.width;
@@ -252,7 +292,6 @@
             };
             this.mouseDown=function(event){
                 var point =this.getMousePosition(event);
-                //console.log('mD '+point.x+'  '+point.y);
                 var gp = rootRenderer.layout.getGP(point.x,point.y);
                 console.log('gd  '+point.x+'  '+point.y+JSON.stringify(gp));
                 if (gp !=undefined){
@@ -268,16 +307,25 @@
                 var point = this.getMousePosition(event);
                 var rd = rootRenderer.layout.getDraggedObjectGP();
                 if(rd!=undefined){
-                    rd.x=point.x;
-                    rd.y=point.y;
+                    rd.x=point.x-rd.ox;
+                    rd.y=point.y-rd.oy;
+                    rootRenderer.redraw();
                 }
-                rootRenderer.redraw();
             };
-
+            this.doubleClick=function(event){
+               var point =  this.getMousePosition(event);
+               var rd = rootRenderer.layout.getGP(point.x,point.y);
+                console.log('double +x:' +JSON.stringify(point)+'  ' +JSON.stringify(rd));
+                if(rd !=undefined){
+                    var obj = rootRenderer.layout.getObject(point.x,point.y);
+                  createElement(obj,rd.x,rd.y,rd.width);
+                }
+            };
              this.registerListeners=function(){
                 activeCanvas.addEventListener('mousedown', this.mouseDown.bind(this));
                 activeCanvas.addEventListener('mouseup', this.mouseUp.bind(this));
                 activeCanvas.addEventListener('mousemove', this.mouseMove.bind(this));
+                activeCanvas.addEventListener('dblclick', this.doubleClick.bind(this));
             };
 
             function initializeContext(canvasElement){
