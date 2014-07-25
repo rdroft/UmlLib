@@ -3,13 +3,6 @@
  */
 'use strict';
 (function(global){
-    var DiagramColours = {
-        colours: {c1: '#FFEC94', c2: '#FFAEAE', c3: '#FFF0AA', c4: '#B0E57C', c5: '#B4D8E7', c6: '#56BAEC'},
-        scheme3: {background: '#ffffff', block: '#FFF0AA', text: '#000000'},
-        scheme1: {background: '#ffffff', block: '#56BAEC', text: '#000000'},
-        scheme2: {background: '#ffffff', block: '#B4D8E7', text: '#000000'}
-    };
-
     /**
      * @param {Number} [params.x]
      * @param {Number} [params.y]
@@ -28,12 +21,20 @@
          this.draw = function(obj,ld){}
     };
 
+    /**Layout
+     * Diagram Layout manager
+     * @constructor
+     *
+     * */
     var Layout = function(){
         var map=[]; //LayoutData hire
+        var leafs=undefined;
+        var draggedObjectId=undefined;
         this.getById=function(id){
             return map[id];
         };
         this.add=function(root){
+            this.leafs = root.leafs;
             for (var j=0;j<root.leafs.length;j++){
                if(root.leafs[j].rendererData===undefined){
                  map[j]= RenderedData.getDefault();
@@ -42,9 +43,45 @@
                }
             }
         };
-        this.layout=function(){}
+        this.setDraggedObjectGd=function(gd){
+             draggedObjectId = gd;
+        };
+        this.getDraggedObjectGP=function(){
+            return draggedObjectId;
+        }
+        this.getPlaceLocationFor=function(x,y,w,h){};
+        this.getGP = function(x,y){
+            for(x in map){
+                var gd = map[x];
+                if(gd.x <= x <=gd.x+gd.width){
+                    if(gd.y <=y<=gd.y+gd.height){
+                        return map[x];
+                    }
+                }
+            }
+            return undefined;
+        };
+        this.getObject = function(x,y){
+           for(x in map){
+               var gd = map[x];
+               if(gd.x <= x <=gd.x+gd.width){
+                   if(gd.y <=y<=gd.y+gd.height){
+                       return leafs[x];
+                   }
+               }
+           }
+            return undefined;
+        };
     };
 
+    /**Layout Renderer Constructor
+     * Root renderer
+     * @constructor
+     * @param {Context2D} [ctx]
+     * @param {Object} [config]
+     * @param {Number} [config.width]
+     * @param {Number} [config.height]
+    // **/
     var LayoutRenderer = function(ctx,config){
         this.activeCtx=ctx;
         this.canvasConfig = config;
@@ -81,14 +118,18 @@
             ctx.lineWidth=1;
             ctx.fillStyle = 'black';
             ctx.stroke();
-        }(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height);
-
+        };
         this.draw=function(rootObject){
             ctx.font = "15px Georgia";
             ctx.fillText(rootObject.type+' '+rootObject.name,12.5,13.5);
             this.drawLeafs(rootObject);
         };
 
+        this.redraw=function(){
+          this.canvasConfig.canvas1.width =this.canvasConfig.canvas1.width;
+          this.drawGrid(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height);
+          this.draw(this.diagram);
+        };
         this.drawLeafs=function(rootObject){
             for(var j =0;j<rootObject.leafs.length;j++){
                var obj = rootObject.leafs[j];
@@ -96,11 +137,14 @@
                renderer.draw(obj,this.layout.getById(j),this.activeCtx);
             }
         };
-
+        this.diagram=undefined;
         this.setDiagram = function(digram){
             this.layout.add(digram);
+            this.diagram = digram;
             this.draw(digram);
+
         };
+        this.drawGrid(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height)
     };
 
     var RendererFactory =function($rootRenderer){
@@ -125,14 +169,53 @@
             };
         });
         this.addRenderer('Connector',function(factory,root){
+            var rootRenderer = root;
             this.draw = function(obj,gd,ctx){
-                var frd = obj.from.rendererData;
-                var trd = obj.to.rendererData;
+                var src = obj.from.rendererData;
+                var dst = obj.to.rendererData;
+                var sx = src.x+src.width/2;
+                var sy = src.y+src.height/2;
+                var dx = dst.x+dst.width/2;
+                var dy = dst.y+dst.height/2;
+                if(sy>dy+src.height){
+                    sy=src.y;
+                    dy=dst.y+dst.height;
+                }else if(sy<dy-dst.height){
+                    sy=src.y+src.height;
+                    dy=dst.y;
+                }else {
+                    if (sx < dx) {
+                        dx = dst.x;
+                        sx = src.x+src.width;
+                    }else{
+                        dx = dst.x+dst.width;
+                        sx = src.x;
+                    }
+                }
+
+
                 ctx.beginPath();
-                ctx.moveTo(frd.x+frd.width/2,(frd.y+frd.height));
-                ctx.lineTo(trd.x+trd.width/2,trd.y);
+                ctx.moveTo(sx,sy);
+                ctx.lineTo(dx,dy);
+                console.log("connector "+sx+':'+sy +' to '+dx+':'+dy);
                 ctx.stroke();
+
             };
+        });
+
+        this.addRenderer('Lifeline',function(factory,root){
+           this.draw=function(obj,gd,ctx){
+              if(gd.lineHeight ===undefined) {
+                  gd.lineHeight = 300;
+              }
+              var startLineX =gd.x+(gd.width/2);
+              ctx.fillText(obj.name, gd.x + 10.5, gd.y + 14.5);
+              ctx.strokeRect(gd.x,gd.y,gd.width,gd.height);
+              ctx.beginPath();
+              ctx.moveTo(startLineX,gd.y+gd.height);
+              ctx.lineTo(startLineX,gd.y+gd.lineHeight);
+              ctx.stroke();
+           };
         });
     };
 
@@ -160,23 +243,61 @@
                 parent.appendChild(canvas);
                 return canvas;
             };
+            ///move this to another place
+            this.getMousePosition = function (event) {
+                var rect = activeCanvas.getBoundingClientRect();
+                var rx = event.clientX - rect.left;
+                var ry = event.clientY - rect.top;
+                return {x: rx, y: ry};
+            };
+            this.mouseDown=function(event){
+                var point =this.getMousePosition(event);
+                //console.log('mD '+point.x+'  '+point.y);
+                var gp = rootRenderer.layout.getGP(point.x,point.y);
+                console.log('gd  '+point.x+'  '+point.y+JSON.stringify(gp));
+                if (gp !=undefined){
+                    gp.dragged = true;
+                };
+                rootRenderer.layout.setDraggedObjectGd(gp);
+            };
+            this.mouseUp=function(event){
+                rootRenderer.layout.setDraggedObjectGd(undefined);
+            };
+
+            this.mouseMove = function(event){
+                var point = this.getMousePosition(event);
+                var rd = rootRenderer.layout.getDraggedObjectGP();
+                if(rd!=undefined){
+                    rd.x=point.x;
+                    rd.y=point.y;
+                }
+                rootRenderer.redraw();
+            };
+
+             this.registerListeners=function(){
+                activeCanvas.addEventListener('mousedown', this.mouseDown.bind(this));
+                activeCanvas.addEventListener('mouseup', this.mouseUp.bind(this));
+                activeCanvas.addEventListener('mousemove', this.mouseMove.bind(this));
+            };
+
             function initializeContext(canvasElement){
                 var ctx = canvasElement.getContext("2d");
-                //ctx.fillStyle = DiagramColours.colours.c5;
-                //ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
                 return ctx;
             };
+
             this.__init=function(params){
                 rootElement = getElement(params.containerId);
                 activeCanvas = bindCanvas(params,rootElement);
                 actx = initializeContext(activeCanvas);
-                rootRenderer = new LayoutRenderer(actx,{width:activeCanvas.width,height:activeCanvas.height});
-            }(params);
+                rootRenderer = new LayoutRenderer(actx,{width:activeCanvas.width,height:activeCanvas.height,canvas1:activeCanvas});
+                this.registerListeners();
+            };
             this.diagram = undefined;
             this.showDiagram=function(diagram){
                 this.diagram = diagram;
                 rootRenderer.setDiagram(diagram);
             };
+           // this.__init(params);
         },
         /**
          * UmlLibrary Base Object
@@ -190,13 +311,16 @@
         UObject:function(params){
             this.rendererName='BaseObject';
             this.name="Empty";
+            this.parent=undefined;
             this.rendererData={};
             this.leafs = [];
-            this.__init =function(params){
-                this.rendererData = (params.rendererData||{x:50,y:50,width:150,height:40});
-                if(params.name!=undefined) {
+            this.__init =function(params) {
+                if (params != undefined) {
+                this.rendererData = (params.rendererData || {x: 50, y: 50, width: 150, height: 40});
+                if (params.name != undefined) {
                     this.name = params.name;
                 }
+              }
             }
             this.__init(params);
         },
@@ -206,6 +330,11 @@
             this.to = to;
             this.__init=function(params){
           }(params);
+        },
+
+        Lifeline:function(params){
+            this.rendererName = 'Lifeline';
+            this.__init(params);
         },
         /**
          * @constructor
@@ -241,6 +370,7 @@
     var init = function(lib){
         console.log('init');
         extend(lib.SequenceDiagram, new lib.Diagram());
+        extend(lib.Lifeline,new lib.UObject());
     }(global.UmlLib);
 
 })(this);

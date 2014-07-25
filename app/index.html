@@ -38,16 +38,30 @@
     };
 ////
     var seq = new UmlLib.Diagram({name:"A1"});
-    var a1 = new UmlLib.UObject({name:'Main Object'});
+    var a1 = new UmlLib.UObject({name:'Main Object',rendererData:{x:500,y:150,width:123,height:53}});
     var a2 = new UmlLib.UObject({name:'Child Object 2',rendererData:{x:150,y:125,width:123,height:23}});
     var a3 = new UmlLib.UObject({name:'Child Object 1',rendererData:{x:5,y:125,width:123,height:23}});
+    var a4 = new UmlLib.UObject({name:'Child',rendererData:{x:355,y:150,width:123,height:23}});
+    var a0 = new UmlLib.UObject({name:'Super',rendererData:{x:500,y:300,width:123,height:23}});
+    var a5 = new UmlLib.UObject({name:'Line Ojb',rendererData:{x:550,y:50,width:100,height:50}});
+    var a6 = new UmlLib.UObject({name:'Line Ojb1',rendererData:{x:400,y:85,width:100,height:50}});
     seq.addObject(a1);
     seq.addObject(a2);
     seq.addObject(a3);
+    seq.addObject(a4);
+    seq.addObject(a0);
+    seq.addObject(a5);
+    seq.addObject(a6);
+    seq.addObject(new UmlLib.Connector(a1,a4));
     seq.addObject(new UmlLib.Connector(a1,a2));
     seq.addObject(new UmlLib.Connector(a1,a3));
+    seq.addObject(new UmlLib.Connector(a0,a1));
+    seq.addObject(new UmlLib.Connector(a1,a0));
+    seq.addObject(new UmlLib.Connector(a1,a5));
+    seq.addObject(new UmlLib.Connector(a1,a6));
     printProps('seq',seq)
     var view = new UmlLib.View({containerId:'diagram',width:1001,height:3401});
+    view.__init({containerId:'diagram',width:1001,height:3401});
     view.showDiagram(seq);
 
 </script>
