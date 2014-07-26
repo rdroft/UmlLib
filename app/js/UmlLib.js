@@ -3,27 +3,19 @@
  */
 'use strict';
 (function(global){
-
-    var Font ={
-        a1:'Georgia, serif',
-        a2:'Times New Roman',
-        a3:'Comic Sans MS'
-    };
-    /**
-     * @param {Number} [params.x]
-     * @param {Number} [params.y]
-     * @param {Number} [param.width]
-     * @param {Number} [params.height]
-     * @param {Number} [params.fontSize]
-     * @param {String} [colour scheme]
-     */
-    var RenderedData = {
-        getDefault: function(){
-            return {x:10,y:10,width:100,height:20};
-        }
-    };
-
-    var Renderer = function($factory,$rootRenderer){
+   var Util = {
+       extend: function (child, parent) {
+           child.prototype = parent;
+           child.prototype.constructor = child;
+           return child;
+       },
+       fonts:{
+           a1:'Georgia, serif',
+           a2:'Times New Roman',
+           a3:'Comic Sans MS'
+       }
+   }
+   var Renderer = function($factory,$rootRenderer){
          this.draw = function(obj,ld){}
     };
 
@@ -32,7 +24,8 @@
      * @constructor
      *
      * */
-    var Layout = function(){
+    var Layout = function(rendererInstance){
+        var renderer = rendererInstance;
         var map=[]; //LayoutData hire
         var leafs=[];
         var draggedObjectId=undefined;
@@ -43,11 +36,14 @@
             leafs = root.leafs;
             for (var j=0;j<root.leafs.length;j++){
                if(root.leafs[j].rendererData===undefined){
-                 map[j]= RenderedData.getDefault();
+                 map[j]= this.findPlace(100,25);
                }else{
                   map[j] = root.leafs[j].rendererData;
                }
             }
+        };
+        this.findPlace=function(w,h){
+          return {x:100,y:100,width:w,height:h};
         };
         this.setDraggedObjectGd=function(gd){
              draggedObjectId = gd;
@@ -55,7 +51,6 @@
         this.getDraggedObjectGP=function(){
             return draggedObjectId;
         }
-        this.getPlaceLocationFor=function(x,y,w,h){};
         this.getGP = function(x,y){
             for(var v in map){
                 var gd = map[v];
@@ -69,7 +64,6 @@
             }
             return undefined;
         };
-
         this.getObject = function(x,y){
            for(var v=0;v<map.length;v++){
                var gd = map[v];
@@ -80,6 +74,9 @@
                }
            }
             return undefined;
+        };
+        this.update=function(){
+            renderer.redraw();
         };
     };
 
@@ -94,8 +91,8 @@
     var LayoutRenderer = function(ctx,config){
         this.activeCtx=ctx;
         this.canvasConfig = config;
-        this.rendererFactory = new RendererFactory(this);
-        this.layout = new Layout();
+        this.rendererFactory = new BaseRendererFactory(this);
+        this.layout = new Layout(this);
         this.drawGrid =function(ctx,width,height){
             var grid_size=50;
             var pix_s=0.5;
@@ -129,7 +126,7 @@
             ctx.stroke();
         };
         this.draw=function(rootObject){
-            ctx.font = '15px '+Font.a3;
+            ctx.font = '15px '+Util.fonts.a3;
             ctx.fillText(rootObject.type+' '+rootObject.name,12.5,13.5);
             this.drawLeafs(rootObject);
         };
@@ -155,8 +152,12 @@
         };
         this.drawGrid(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height)
     };
-
-    var RendererFactory =function($rootRenderer){
+ /**Renderer Factory
+  * @constructor
+  * Factory creates Renderer Family
+  * contains renderer for each object type
+  * */
+    var BaseRendererFactory =function($rootRenderer){
         var renders={};
         var rootRenderer = $rootRenderer;
         this.getRenderer=function(name){
@@ -166,8 +167,17 @@
             renders[name]= new renderer(this,rootRenderer);
         };
         this.addRenderer('BaseObject',function(factory,root){
+            var text_margin={
+               right:10.5,
+               left:3,
+               top:14.5
+            };
+
             this.draw = function(obj,gd,ctx) {
-                console.log('BaseCalled');
+                var txt_m = ctx.measureText(obj.name);
+                if(txt_m.width>(gd.width-text_margin.right)){
+                   gd.width = txt_m.width+text_margin.right+text_margin.left;
+                }
                 ctx.fillText(obj.name, gd.x + 10.5, gd.y + 14.5);
                 ctx.strokeRect(gd.x, gd.y, gd.width, gd.height);
                 if (obj.leafs != undefined) {
@@ -186,13 +196,15 @@
                 var sy = src.y+src.height/2;
                 var dx = dst.x+dst.width/2;
                 var dy = dst.y+dst.height/2;
-                if(sy>dy+src.height){
+                if(sy>dy+src.height+30){
                     sy=src.y;
                     dy=dst.y+dst.height;
-                }else if(sy<dy-dst.height){
+                }else if((sy<dy-dst.height-30)){
                     sy=src.y+src.height;
                     dy=dst.y;
+                 //   ctx.strokeStyle = '#ff0000';
                 }else {
+                   // ctx.strokeStyle = '#00ff00';
                     if (sx < dx) {
                         dx = dst.x;
                         sx = src.x+src.width;
@@ -201,12 +213,9 @@
                         sx = src.x;
                     }
                 }
-
-
                 ctx.beginPath();
                 ctx.moveTo(sx,sy);
                 ctx.lineTo(dx,dy);
-                console.log("connector "+sx+':'+sy +' to '+dx+':'+dy);
                 ctx.stroke();
 
             };
@@ -227,6 +236,54 @@
            };
         });
     };
+    var SequenceRendererFactory = function($rootRenderer){};
+    var ClassRendererFactory = function($rootRenderer) {
+        this.addRenderer('Class', function () {
+
+        });
+    };
+    Util.extend(SequenceRendererFactory,new BaseRendererFactory());
+    Util.extend(ClassRendererFactory,new BaseRendererFactory());
+
+    var DiagramRendererFactory = function(){
+      this.factories={};
+      this.getInstance=function(diagramType){
+         return this.factories[diagramType];
+      };
+    };
+
+    var ViewController = function(clayout){
+        var layout = clayout;
+        this.mouseDown=function(point){
+            var gp = layout.getGP(point.x,point.y);
+            if (gp !=undefined){
+                gp.dragged = true;
+            };
+            layout.setDraggedObjectGd(gp);
+        };
+        this.mouseUp=function(point){
+            layout.setDraggedObjectGd(undefined);
+        };
+
+        this.mouseMove = function(point){
+            var rd = layout.getDraggedObjectGP();
+            if(rd!=undefined){
+                rd.x=point.x-rd.ox;
+                rd.y=point.y-rd.oy;
+                layout.update();
+            }
+        };
+        this.doubleClick=function(point){
+            var rd = layout.getGP(point.x,point.y);
+            console.log('double +x:' +JSON.stringify(point)+'  ' +JSON.stringify(rd));
+            if(rd !=undefined){
+                var obj = layout.getObject(point.x,point.y);
+                view.createElement(obj,rd.x,rd.y,rd.width,function(){
+                    layout.update();
+                });
+            }
+        };
+    };
 
     global.UmlLib = {
         /**
@@ -242,11 +299,18 @@
             var activeCanvas;
             var actx;
             var rootRenderer;
+            var controller;
             function getElement(elementId){
                 return document.getElementById(elementId);
             };
+            this.getMousePosition = function (event) {
+                var rect = activeCanvas.getBoundingClientRect();
+                var rx = event.clientX - rect.left;
+                var ry = event.clientY - rect.top;
+                return {x: rx, y: ry};
+            };
 
-            function createElement(obj,x,y,w){
+            this.createElement=function(obj,x,y,w,callback){
                 var el=document.createElement('input');
                 el.type='text';
                 el.value=obj.name;
@@ -257,13 +321,12 @@
                 el.addEventListener('keyup',function(event){
                     if(event.keyCode==13||event.which==13){
                         obj.name=el.value;
-                        console.log("redr");
                         var cte = document.getElementById(rootElement.id);
                         if(cte){
                             el.somef=true;
                             cte.removeChild(el);
                         }
-
+                        callback();
                     }
                 }.bind(this));
                 el.addEventListener('blur',function(event){
@@ -272,6 +335,7 @@
                     if(!el.somef){
                         document.getElementById(rootElement.id).removeChild(el);
                     }
+                    callback();
                 }.bind(this));
                 document.getElementById(rootElement.id).appendChild(el);
                 el.focus();
@@ -283,49 +347,20 @@
                 parent.appendChild(canvas);
                 return canvas;
             };
-            ///move this to another place
-            this.getMousePosition = function (event) {
-                var rect = activeCanvas.getBoundingClientRect();
-                var rx = event.clientX - rect.left;
-                var ry = event.clientY - rect.top;
-                return {x: rx, y: ry};
-            };
-            this.mouseDown=function(event){
-                var point =this.getMousePosition(event);
-                var gp = rootRenderer.layout.getGP(point.x,point.y);
-                console.log('gd  '+point.x+'  '+point.y+JSON.stringify(gp));
-                if (gp !=undefined){
-                    gp.dragged = true;
-                };
-                rootRenderer.layout.setDraggedObjectGd(gp);
-            };
-            this.mouseUp=function(event){
-                rootRenderer.layout.setDraggedObjectGd(undefined);
-            };
 
-            this.mouseMove = function(event){
-                var point = this.getMousePosition(event);
-                var rd = rootRenderer.layout.getDraggedObjectGP();
-                if(rd!=undefined){
-                    rd.x=point.x-rd.ox;
-                    rd.y=point.y-rd.oy;
-                    rootRenderer.redraw();
-                }
-            };
-            this.doubleClick=function(event){
-               var point =  this.getMousePosition(event);
-               var rd = rootRenderer.layout.getGP(point.x,point.y);
-                console.log('double +x:' +JSON.stringify(point)+'  ' +JSON.stringify(rd));
-                if(rd !=undefined){
-                    var obj = rootRenderer.layout.getObject(point.x,point.y);
-                  createElement(obj,rd.x,rd.y,rd.width);
-                }
-            };
-             this.registerListeners=function(){
-                activeCanvas.addEventListener('mousedown', this.mouseDown.bind(this));
-                activeCanvas.addEventListener('mouseup', this.mouseUp.bind(this));
-                activeCanvas.addEventListener('mousemove', this.mouseMove.bind(this));
-                activeCanvas.addEventListener('dblclick', this.doubleClick.bind(this));
+             this.registerListeners=function(controller){
+                activeCanvas.addEventListener('mousedown', function (event) {
+                    controller.mouseDown(this.getMousePosition(event));
+                }.bind(this));
+                activeCanvas.addEventListener('mouseup', function(event){
+                    controller.mouseUp(this.getMousePosition(event));
+                }.bind(this));
+                activeCanvas.addEventListener('mousemove', function(event){
+                    controller.mouseMove(this.getMousePosition(event));
+                }.bind(this));
+                activeCanvas.addEventListener('dblclick',function(event){
+                    controller.doubleClick(this.getMousePosition(event));
+                }.bind(this));
             };
 
             function initializeContext(canvasElement){
@@ -338,14 +373,15 @@
                 activeCanvas = bindCanvas(params,rootElement);
                 actx = initializeContext(activeCanvas);
                 rootRenderer = new LayoutRenderer(actx,{width:activeCanvas.width,height:activeCanvas.height,canvas1:activeCanvas});
-                this.registerListeners();
+                controller  = new ViewController(rootRenderer.layout,this);
+                this.registerListeners(controller);
             };
             this.diagram = undefined;
             this.showDiagram=function(diagram){
                 this.diagram = diagram;
                 rootRenderer.setDiagram(diagram);
             };
-           // this.__init(params);
+            this.__init(params);
         },
         /**
          * UmlLibrary Base Object
@@ -371,6 +407,9 @@
               }
             }
             this.__init(params);
+        },
+        Class:function(params){
+          this.rendererName='Class';
         },
         Connector:function(from,to,params){
             this.rendererName='Connector';
@@ -408,17 +447,10 @@
             this.type='Sequence';
         }
     };
-    var extend=function(child,parent){
-        console.log('extend');
-        child.prototype = parent;
-        child.prototype.constructor = child;
-    };
-
-    console.log('vv');
     var init = function(lib){
-        console.log('init');
-        extend(lib.SequenceDiagram, new lib.Diagram());
-        extend(lib.Lifeline,new lib.UObject());
+        Util.extend(lib.SequenceDiagram, new lib.Diagram());
+        Util.extend(lib.Lifeline,new lib.UObject());
+        Util.extend(lib.Class,new lib.UObject());
     }(global.UmlLib);
 
 })(this);

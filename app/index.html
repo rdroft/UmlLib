@@ -14,29 +14,6 @@
     <div id="diagram"></div>
 </div>
 <script>
-
-    var parent = function (){
-       this.list = [];
-       this.__init=function(){
-           console.log("init parenet");
-       };
-       this.addObject = function(object){
-            this.list.push(object);
-       };
-    };
-//    var child = function(){};
-//
-//    child.prototype = new parent();
-//    child.prototype.constructor = child;
-//    var c = new child();
-//    c.addObject('one');
-    var printProps=function(pref,c) {
-        console.log('props of:'+c)
-        for (var p in c) {
-            console.log(pref+": " + p+"  "+c[p]);
-        }
-    };
-////
     var seq = new UmlLib.Diagram({name:"A1"});
     var a1 = new UmlLib.UObject({name:'Main Object',rendererData:{x:500,y:150,width:123,height:53}});
     var a2 = new UmlLib.UObject({name:'Child Object 2',rendererData:{x:150,y:125,width:123,height:23}});
@@ -59,9 +36,8 @@
     seq.addObject(new UmlLib.Connector(a1,a0));
     seq.addObject(new UmlLib.Connector(a1,a5));
     seq.addObject(new UmlLib.Connector(a1,a6));
-    printProps('seq',seq)
     var view = new UmlLib.View({containerId:'diagram',width:1001,height:3401});
-    view.__init({containerId:'diagram',width:1001,height:3401});
+    //view.__init({containerId:'diagram',width:1001,height:3401});
     view.showDiagram(seq);
 
 </script>
