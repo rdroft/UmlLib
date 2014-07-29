@@ -122,12 +122,20 @@
      **/
     var BaseRendererFactory = function (__layout) {
         this.renders = {};
+        this.renderInstance={};
         this.layout = __layout;
         this.getRenderer = function (name) {
-            return this.renders[name];
+            if(this.renderInstance[name]){
+                return this.renderInstance[name];
+            }else{
+                if(this.renders[name]){
+                    this.renderInstance[name]= new this.renders[name](this,this.layout);
+                    return this.renderInstance[name];
+                }
+            }
         };
         this.addRenderer = function (name, renderer) {
-            this.renders[name] = new renderer(this, this.layout);
+            this.renders[name] = renderer;
         };
         this.addRenderer('BaseObject', function (factory, layout) {
             var text_margin = {
