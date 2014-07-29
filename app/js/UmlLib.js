@@ -2,181 +2,146 @@
  * Created by rpashniev on 22.07.2014.
  */
 'use strict';
-(function(global){
-   var Util = {
-       extend: function (child, parent) {
-           child.prototype = parent;
-           child.prototype.constructor = child;
-           return child;
-       },
-       fonts:{
-           a1:'Georgia, serif',
-           a2:'Times New Roman',
-           a3:'Comic Sans MS'
-       }
-   }
-   var Renderer = function($factory,$rootRenderer){
-         this.draw = function(obj,ld){}
-    };
-
+(function (global) {
+    var Util = {
+        extend: function (child, parent) {
+            child.prototype = parent;
+            child.prototype.constructor = child;
+            return child;
+        },
+        fonts: {
+            a1: 'Georgia, serif',
+            a2: 'Times New Roman',
+            a3: 'Comic Sans MS'
+        }
+    }
     /**Layout
      * Diagram Layout manager
      * @constructor
-     *
      * */
-    var Layout = function(rendererInstance){
-        var renderer = rendererInstance;
-        var map=[]; //LayoutData hire
-        var leafs=[];
-        var draggedObjectId=undefined;
-        this.getById=function(id){
+    var Layout = function (canvasConfig,diagram) {
+        this.canvasConfig = canvasConfig;
+        this.rfactory = undefined;
+        this.width = this.canvasConfig.activeCanvas.width;
+        this.height = this.canvasConfig.activeCanvas.height;
+        this.diagram = diagram;
+        this.mouseObj = {
+            id: -2,
+            rd: {x: 0, y: 0, width: 0, height: 0},
+            type: 'mouse'
+        };
+        var map = []; //LayoutData hire
+        var leafs = [];
+        var draggedObjectId = undefined;
+        var __init=function(diagram){
+            map = diagram.lp;
+            leafs = diagram.leafs;
+            this.rfactory = new (FactoryList.getFactory(diagram.type))(this);
+            this.updateAll();
+        }.bind(this);
+
+        this.getById = function (id) {
             return map[id];
         };
-        this.add=function(root){
-            leafs = root.leafs;
-            for (var j=0;j<root.leafs.length;j++){
-               if(root.leafs[j].rendererData===undefined){
-                 map[j]= this.findPlace(100,25);
-               }else{
-                  map[j] = root.leafs[j].rendererData;
-               }
+
+        this.addNew = function (obj, gd) {
+            obj.id = leafs.length;
+            gd.id = map.length;
+            map.push(gd);
+            leafs.push(obj);
+        };
+
+        this.setDiagram = function (root) {
+            this.updateAll();
+        };
+
+        this.setDraggedObjectGd = function (gd) {
+            if(gd===undefined){
+                if(draggedObjectId){
+                    draggedObjectId.ox=undefined;
+                    draggedObjectId.oy=undefined;
+                    draggedObjectId.dragged=undefined;
+                }
             }
+            draggedObjectId = gd;
         };
-        this.findPlace=function(w,h){
-          return {x:100,y:100,width:w,height:h};
-        };
-        this.setDraggedObjectGd=function(gd){
-             draggedObjectId = gd;
-        };
-        this.getDraggedObjectGP=function(){
+
+        this.getDraggedObjectGP = function () {
             return draggedObjectId;
-        }
-        this.getGP = function(x,y){
-            for(var v in map){
+        };
+
+        this.getGP = function (x, y) {
+            for (var v in map) {
                 var gd = map[v];
-                if(gd.x <= x&&x <=gd.x+gd.width){
-                    if(gd.y<=y&&y<=(gd.y+gd.height)){
-                        map[v].ox = x-gd.x;
-                        map[v].oy = y-gd.y;
+                if (gd.x <= x && x <= gd.x + gd.width) {
+                    if (gd.y <= y && y <= (gd.y + gd.height)) {
+                        map[v].ox = x - gd.x;
+                        map[v].oy = y - gd.y;
                         return map[v];
                     }
                 }
             }
             return undefined;
         };
-        this.getObject = function(x,y){
-           for(var v=0;v<map.length;v++){
-               var gd = map[v];
-               if(gd.x <= x&&x <=gd.x+gd.width){
-                   if(gd.y<=y&&y<=(gd.y+gd.height)){
-                       return leafs[v];
-                   }
-               }
-           }
+
+        this.getObject = function (x, y) {
+            for (var v = 0; v < map.length; v++) {
+                var gd = map[v];
+                if (gd.x <= x && x <= gd.x + gd.width) {
+                    if (gd.y <= y && y <= (gd.y + gd.height)) {
+                        return leafs[v];
+                    }
+                }
+            }
             return undefined;
         };
-        this.update=function(){
-            renderer.redraw();
-        };
-    };
-
-    /**Layout Renderer Constructor
-     * Root renderer
-     * @constructor
-     * @param {Context2D} [ctx]
-     * @param {Object} [config]
-     * @param {Number} [config.width]
-     * @param {Number} [config.height]
-    // **/
-    var LayoutRenderer = function(ctx,config){
-        this.activeCtx=ctx;
-        this.canvasConfig = config;
-        this.rendererFactory = new BaseRendererFactory(this);
-        this.layout = new Layout(this);
-        this.drawGrid =function(ctx,width,height){
-            var grid_size=50;
-            var pix_s=0.5;
-            var caption ={};
-            caption.x=0;
-            caption.y=0;
-            caption.h = 18.5;
-            caption.w1=150.5;
-            caption.w2=163.5;
-            //print grid
-            ctx.lineWidth=0.4;
-            for(var j =0;j < (height/grid_size);j++){
-                ctx.moveTo(pix_s,j*grid_size+pix_s);
-                ctx.lineTo(width-1.5,j*grid_size+pix_s);
-            };
-            for(var j =0;j <(width/grid_size);j++){
-                ctx.moveTo(j*grid_size+pix_s,pix_s);
-                ctx.lineTo(j*grid_size+pix_s,height);
-            };
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.fillStyle = 'white';
-            ctx.moveTo(caption.x,caption.h);
-            ctx.lineTo(caption.w1,caption.h);
-            ctx.lineTo(caption.w2,caption.y);
-            ctx.lineTo(caption.x,caption.y);
-            ctx.lineTo(caption.x,caption.h);
-            ctx.fill();
-            ctx.lineWidth=1;
-            ctx.fillStyle = 'black';
-            ctx.stroke();
-        };
-        this.draw=function(rootObject){
-            ctx.font = '15px '+Util.fonts.a3;
-            ctx.fillText(rootObject.type+' '+rootObject.name,12.5,13.5);
-            this.drawLeafs(rootObject);
-        };
-
-        this.redraw=function(){
-          this.canvasConfig.canvas1.width =this.canvasConfig.canvas1.width;
-          this.drawGrid(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height);
-          this.draw(this.diagram);
-        };
-        this.drawLeafs=function(rootObject){
-            for(var j =0;j<rootObject.leafs.length;j++){
-               var obj = rootObject.leafs[j];
-               var renderer = this.rendererFactory.getRenderer(obj.rendererName);
-               renderer.draw(obj,this.layout.getById(j),this.activeCtx);
+        this.updateById = function (id) {
+            if (id) {
+                //this.rfactory.getRenderer(leafs[id].type).draw(leafs[id],map[id],this.canvasConfig.activeCtx);
+                this.updateAll();
+            } else {
+                this.updateAll();
             }
         };
-        this.diagram=undefined;
-        this.setDiagram = function(digram){
-            this.layout.add(digram);
-            this.diagram = digram;
-            this.draw(digram);
-
+        this.updateAll = function () {
+            this.canvasConfig.activeCanvas.width = this.canvasConfig.activeCanvas.width;
+            this.rfactory.getRenderer('Diagram').draw(this.diagram, {}, this.canvasConfig.activeCtx);
+            for (var j = 0; j < leafs.length; j++) {
+                if (leafs[j]) {
+                    this.rfactory.getRenderer(leafs[j].type).draw(leafs[j], map[j], this.canvasConfig.activeCtx);
+                }
+            }
         };
-        this.drawGrid(this.activeCtx,this.canvasConfig.width,this.canvasConfig.height)
+        __init(diagram);
     };
- /**Renderer Factory
-  * @constructor
-  * Factory creates Renderer Family
-  * contains renderer for each object type
-  * */
-    var BaseRendererFactory =function($rootRenderer){
-        var renders={};
-        var rootRenderer = $rootRenderer;
-        this.getRenderer=function(name){
-            return renders[name];
+    /**  Renderer
+     * Renderer Factory
+     * @constructor
+     * Factory creates Renderer Family
+     * contains renderer for each object type
+     **/
+    var BaseRendererFactory = function (__layout) {
+        this.renders = {};
+        this.layout = __layout;
+        this.getRenderer = function (name) {
+            return this.renders[name];
         };
-        this.addRenderer=function(name,renderer){
-            renders[name]= new renderer(this,rootRenderer);
+        this.addRenderer = function (name, renderer) {
+            this.renders[name] = new renderer(this, this.layout);
         };
-        this.addRenderer('BaseObject',function(factory,root){
-            var text_margin={
-               right:10.5,
-               left:3,
-               top:14.5
+        this.addRenderer('BaseObject', function (factory, layout) {
+            var text_margin = {
+                right: 10.5,
+                left: 3,
+                top: 14.5
             };
-
-            this.draw = function(obj,gd,ctx) {
+            this.drawMenu = function (obj, gd, ctx) {
+                ctx.fillRect(gd.x + gd.width - 4, gd.y, 4, 4);
+            };
+            this.draw = function (obj, gd, ctx) {
                 var txt_m = ctx.measureText(obj.name);
-                if(txt_m.width>(gd.width-text_margin.right)){
-                   gd.width = txt_m.width+text_margin.right+text_margin.left;
+                if (txt_m.width > (gd.width - text_margin.right)) {
+                    gd.width = txt_m.width + text_margin.right + text_margin.left;
                 }
                 ctx.fillText(obj.name, gd.x + 10.5, gd.y + 14.5);
                 ctx.strokeRect(gd.x, gd.y, gd.width, gd.height);
@@ -185,108 +150,209 @@
                     for (var i in obj.leafs) {
                     }
                 }
+                this.drawMenu(obj, gd, ctx);
             };
         });
-        this.addRenderer('Connector',function(factory,root){
-            var rootRenderer = root;
-            this.draw = function(obj,gd,ctx){
-                var src = obj.from.rendererData;
-                var dst = obj.to.rendererData;
-                var sx = src.x+src.width/2;
-                var sy = src.y+src.height/2;
-                var dx = dst.x+dst.width/2;
-                var dy = dst.y+dst.height/2;
-                if(sy>dy+src.height+30){
-                    sy=src.y;
-                    dy=dst.y+dst.height;
-                }else if((sy<dy-dst.height-30)){
-                    sy=src.y+src.height;
-                    dy=dst.y;
-                 //   ctx.strokeStyle = '#ff0000';
-                }else {
-                   // ctx.strokeStyle = '#00ff00';
+        this.addRenderer('Connector', function (factory, layout) {
+            this.draw = function (obj, gd, ctx) {
+                var src = layout.getById(obj.from);
+                var dst = obj.to == layout.mouseObj.id ? layout.mouseObj.rd : layout.getById(obj.to);
+                var sx = src.x + src.width / 2;
+                var sy = src.y + src.height / 2;
+                var dx = dst.x + dst.width / 2;
+                var dy = dst.y + dst.height / 2;
+
+                if ((sy - src.height) > dy) {
+                    sy = src.y;
+                    dy = dst.y + dst.height;
+                    //ctx.strokeStyle = '#0000ff';
+                } else if ((sy < (dy - dst.height))) {
+                    sy = src.y + src.height;
+                    dy = dst.y;
+                    //ctx.strokeStyle = '#ff0000';
+                } else {
                     if (sx < dx) {
+                        // ctx.strokeStyle = '#00ff00';
                         dx = dst.x;
-                        sx = src.x+src.width;
-                    }else{
-                        dx = dst.x+dst.width;
+                        sx = src.x + src.width;
+                    } else {
+                        //  ctx.strokeStyle = '#00a1aa';
+                        dx = dst.x + dst.width;
                         sx = src.x;
                     }
                 }
                 ctx.beginPath();
-                ctx.moveTo(sx,sy);
-                ctx.lineTo(dx,dy);
+//                if(obj.to==-2){
+//                    console.log('okk x:'+sx+' y: '+sy+'    to x:'+dx+' y:'+dy);
+//                }
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(dx, dy);
                 ctx.stroke();
 
             };
         });
-
-        this.addRenderer('Lifeline',function(factory,root){
-           this.draw=function(obj,gd,ctx){
-              if(gd.lineHeight ===undefined) {
-                  gd.lineHeight = 300;
-              }
-              var startLineX =gd.x+(gd.width/2);
-              ctx.fillText(obj.name, gd.x + 10.5, gd.y + 14.5);
-              ctx.strokeRect(gd.x,gd.y,gd.width,gd.height);
-              ctx.beginPath();
-              ctx.moveTo(startLineX,gd.y+gd.height);
-              ctx.lineTo(startLineX,gd.y+gd.lineHeight);
-              ctx.stroke();
-           };
-        });
-    };
-    var SequenceRendererFactory = function($rootRenderer){};
-    var ClassRendererFactory = function($rootRenderer) {
-        this.addRenderer('Class', function () {
-
-        });
-    };
-    Util.extend(SequenceRendererFactory,new BaseRendererFactory());
-    Util.extend(ClassRendererFactory,new BaseRendererFactory());
-
-    var DiagramRendererFactory = function(){
-      this.factories={};
-      this.getInstance=function(diagramType){
-         return this.factories[diagramType];
-      };
-    };
-
-    var ViewController = function(clayout){
-        var layout = clayout;
-        this.mouseDown=function(point){
-            var gp = layout.getGP(point.x,point.y);
-            if (gp !=undefined){
-                gp.dragged = true;
+        this.addRenderer('Lifeline', function (factory, layout) {
+            this.draw = function (obj, gd, ctx) {
+                if (gd.lineHeight === undefined) {
+                    gd.lineHeight = 300;
+                }
+                var startLineX = gd.x + (gd.width / 2);
+                ctx.fillText(obj.name, gd.x + 10.5, gd.y + 14.5);
+                ctx.strokeRect(gd.x, gd.y, gd.width, gd.height);
+                ctx.beginPath();
+                ctx.moveTo(startLineX, gd.y + gd.height);
+                ctx.lineTo(startLineX, gd.y + gd.lineHeight);
+                ctx.stroke();
             };
-            layout.setDraggedObjectGd(gp);
+        });
+        this.addRenderer('Diagram', function (factory, layout) {
+            this.drawGrid = function (ctx, width, height) {
+                var grid_size = 50;
+                var pix_s = 0.5;
+                var caption = {x: 0, y: 0, h: 18.5, w1: 150.5, w2: 163.5};
+                //print grid
+                ctx.lineWidth = 0.4;
+                for (var j = 0; j < (height / grid_size); j++) {
+                    ctx.moveTo(pix_s, j * grid_size + pix_s);
+                    ctx.lineTo(width - 1.5, j * grid_size + pix_s);
+                }
+                ;
+                for (var j = 0; j < (width / grid_size); j++) {
+                    ctx.moveTo(j * grid_size + pix_s, pix_s);
+                    ctx.lineTo(j * grid_size + pix_s, height);
+                }
+                ;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.fillStyle = 'white';
+                ctx.moveTo(caption.x, caption.h);
+                ctx.lineTo(caption.w1, caption.h);
+                ctx.lineTo(caption.w2, caption.y);
+                ctx.lineTo(caption.x, caption.y);
+                ctx.lineTo(caption.x, caption.h);
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.fillStyle = 'black';
+                ctx.stroke();
+            };
+            this.draw = function (obj, gd, ctx) {
+                if(layout) {
+                    this.drawGrid(ctx, factory.layout.width, factory.layout.height);
+                }
+                ctx.font = '15px ' + Util.fonts.a3;
+                ctx.fillText(obj.type + ' ' + obj.name, 12.5, 13.5);
+            };
+        });
+    };
+    var SequenceRendererFactory = function (__layout) {
+        this.layout = __layout;
+        //console.log(' created '+JSON.stringify(layout));
+        for(var i in this){
+            console.log('p '+i);
+        }
+    };
+    var ClassRendererFactory = function (__layout) {
+        var renders = {};
+        var layout = __layout;
+        this.addRenderer('Class', function () {
+        });
+    };
+    Util.extend(SequenceRendererFactory, new BaseRendererFactory());
+    Util.extend(ClassRendererFactory, new BaseRendererFactory());
+    var FactoryList = {
+        factories:{
+            Base:BaseRendererFactory,
+            Sequence:SequenceRendererFactory,
+            Class:ClassRendererFactory
+        },
+        getFactory: function(type){
+            return this.factories[type];
+        }
+    };
+    /**ViewController
+     * @constructor
+     * @param {Layout} [layout]
+     * */
+    var ViewController = function (clayout) {
+        var layout = clayout;
+        this.onTop = undefined;
+        this.setOnTop = function (obj) {
+            this.onTop = obj;
         };
-        this.mouseUp=function(point){
-            layout.setDraggedObjectGd(undefined);
-        };
+        this.mouseDown = function (point) {
+            if (this.onTop === undefined) {
+                var gp = layout.getGP(point.x, point.y);
+                if (gp != undefined) {
+                    gp.dragged = true;
+                }
+                layout.setDraggedObjectGd(gp);
+            } else {
+                if (this.onTop.type == 'Connector') {
+                    var obj = layout.getObject(point.x, point.y);
+                    if (obj != undefined) {
+                        if (this.onTop.from === undefined) {
+                            this.onTop.from = obj.id;
+                            this.onTop.to = layout.mouseObj.id;
+                            layout.mouseObj.rd.x = point.x;
+                            layout.mouseObj.rd.y = point.y;
+                            layout.setDraggedObjectGd(layout.mouseObj.rd);
+                            layout.addNew(this.onTop, {});
+                            layout.updateAll();
+                        } else if (this.onTop.to === layout.mouseObj.id) {
+                            this.onTop.to = obj.id;
+                            this.onTop = undefined;
+                            layout.updateAll();
+                        }
+                        ;
+                    }
+                } else {
+                    layout.addNew(this.onTop, {x: point.x, y: point.y, width: 125, height: 25});
+                    this.onTop = undefined;
+                    layout.updateAll();
 
-        this.mouseMove = function(point){
-            var rd = layout.getDraggedObjectGP();
-            if(rd!=undefined){
-                rd.x=point.x-rd.ox;
-                rd.y=point.y-rd.oy;
-                layout.update();
+                }
             }
         };
-        this.doubleClick=function(point){
-            var rd = layout.getGP(point.x,point.y);
-            console.log('double +x:' +JSON.stringify(point)+'  ' +JSON.stringify(rd));
-            if(rd !=undefined){
-                var obj = layout.getObject(point.x,point.y);
-                view.createElement(obj,rd.x,rd.y,rd.width,function(){
-                    layout.update();
+
+        this.mouseUp = function (point) {
+            if (layout.getDraggedObjectGP() === layout.mouseObj.rd) {
+                layout.updateAll();
+            } else {
+                layout.setDraggedObjectGd(undefined);
+            }
+        };
+
+        this.mouseMove = function (point) {
+            var rd = layout.getDraggedObjectGP();
+            if (rd != undefined) {
+                if (rd.ox != undefined) {
+                    rd.x = point.x - rd.ox;
+                } else {
+                    rd.x = point.x;
+                }
+                if (rd.oy != undefined) {
+                    rd.y = point.y - rd.oy;
+                } else {
+                    rd.y = point.y;
+                }
+                layout.updateById(rd.id);
+            }
+        };
+        this.doubleClick = function (point) {
+            var rd = layout.getGP(point.x, point.y);
+            console.log('double +x:' + JSON.stringify(point) + '  ' + JSON.stringify(rd));
+            if (rd != undefined) {
+                var obj = layout.getObject(point.x, point.y);
+                view.createElement(obj, rd.x, rd.y, rd.width, function () {
+                    layout.updateById(obj.id);
                 });
             }
         };
     };
-
     global.UmlLib = {
-        /**
+        /** View
+         * The base Graphical Component responsible for diagram presentation
+         * you should crate view to place diagram
          * @constructor
          * @param {Object} params
          * @param {String} [params.containerId] mandatory ID of container
@@ -294,53 +360,62 @@
          * @param {Number} [params.height]
          * @param {String} [params.background];
          * */
-        View:function(params){
-            var rootElement;
-            var activeCanvas;
-            var actx;
-            var rootRenderer;
+        View: function (params) {
+            var canvasConfig = {
+                parentEl: undefined,
+                activeCanvas: undefined,
+                activeCtx: undefined
+            };
+            var layout;
             var controller;
-            function getElement(elementId){
+            this.log = function (vx) {
+                console.log(vx);
+            }
+            this.setOnTop = function (ojb) {
+                controller.setOnTop(ojb);
+            }
+            function getElement(elementId) {
                 return document.getElementById(elementId);
             };
             this.getMousePosition = function (event) {
-                var rect = activeCanvas.getBoundingClientRect();
+                var rect = canvasConfig.activeCanvas.getBoundingClientRect();
                 var rx = event.clientX - rect.left;
                 var ry = event.clientY - rect.top;
                 return {x: rx, y: ry};
             };
 
-            this.createElement=function(obj,x,y,w,callback){
-                var el=document.createElement('input');
-                el.type='text';
-                el.value=obj.name;
-                el.style.position='absolute';
-                el.style.top=y+70+'px';
-                el.style.left=x+90+'px';
-                el.style.width=(w-10)+'px';
-                el.addEventListener('keyup',function(event){
-                    if(event.keyCode==13||event.which==13){
-                        obj.name=el.value;
-                        var cte = document.getElementById(rootElement.id);
-                        if(cte){
-                            el.somef=true;
+            this.createElement = function (obj, x, y, w, callback) {
+                var parentId = canvasConfig.parentEl.id;
+                var el = document.createElement('input');
+                el.type = 'text';
+                el.value = obj.name;
+                el.style.position = 'absolute';
+                el.style.top = y + 89 + 'px';
+                el.style.left = x + 90 + 'px';
+                el.style.width = (w - 10) + 'px';
+                el.addEventListener('keyup', function (event) {
+                    if (event.keyCode == 13 || event.which == 13) {
+                        obj.name = el.value;
+                        var cte = document.getElementById(parentId);
+                        if (cte) {
+                            el.somef = true;
                             cte.removeChild(el);
                         }
                         callback();
                     }
                 }.bind(this));
-                el.addEventListener('blur',function(event){
-                    obj.name=el.value;
-                    console.log('blur');
-                    if(!el.somef){
-                        document.getElementById(rootElement.id).removeChild(el);
+                el.addEventListener('blur', function (event) {
+                    obj.name = el.value;
+                    //console.log('blur');
+                    if (!el.somef) {
+                        document.getElementById(parentId).removeChild(el);
                     }
                     callback();
                 }.bind(this));
-                document.getElementById(rootElement.id).appendChild(el);
+                document.getElementById(parentId).appendChild(el);
                 el.focus();
             }
-            function bindCanvas(params,parent){
+            function bindCanvas(params, parent) {
                 var canvas = document.createElement("canvas");
                 canvas.width = params.width;
                 canvas.height = params.height;
@@ -348,79 +423,94 @@
                 return canvas;
             };
 
-             this.registerListeners=function(controller){
-                activeCanvas.addEventListener('mousedown', function (event) {
+            this.registerListeners = function (controller) {
+                canvasConfig.activeCanvas.addEventListener('mousedown', function (event) {
                     controller.mouseDown(this.getMousePosition(event));
                 }.bind(this));
-                activeCanvas.addEventListener('mouseup', function(event){
+                canvasConfig.activeCanvas.addEventListener('mouseup', function (event) {
                     controller.mouseUp(this.getMousePosition(event));
                 }.bind(this));
-                activeCanvas.addEventListener('mousemove', function(event){
+                canvasConfig.activeCanvas.addEventListener('mousemove', function (event) {
                     controller.mouseMove(this.getMousePosition(event));
                 }.bind(this));
-                activeCanvas.addEventListener('dblclick',function(event){
+                canvasConfig.activeCanvas.addEventListener('dblclick', function (event) {
                     controller.doubleClick(this.getMousePosition(event));
                 }.bind(this));
             };
 
-            function initializeContext(canvasElement){
+            function initializeContext(canvasElement) {
                 var ctx = canvasElement.getContext("2d");
                 return ctx;
             };
 
-            this.__init=function(params){
-                rootElement = getElement(params.containerId);
-                activeCanvas = bindCanvas(params,rootElement);
-                actx = initializeContext(activeCanvas);
-                rootRenderer = new LayoutRenderer(actx,{width:activeCanvas.width,height:activeCanvas.height,canvas1:activeCanvas});
-                controller  = new ViewController(rootRenderer.layout,this);
-                this.registerListeners(controller);
+            this.__init = function (params) {
+                canvasConfig.parentEl = getElement(params.containerId);
+                canvasConfig.activeCanvas = bindCanvas(params, canvasConfig.parentEl);
+                canvasConfig.activeCtx = initializeContext(canvasConfig.activeCanvas);
             };
             this.diagram = undefined;
-            this.showDiagram=function(diagram){
+            this.showDiagram = function (diagram) {
                 this.diagram = diagram;
-                rootRenderer.setDiagram(diagram);
+                layout = new Layout(canvasConfig,diagram);
+                controller = new ViewController(layout, this);
+                this.registerListeners(controller);
             };
             this.__init(params);
         },
-        /**
-         * UmlLibrary Base Object
+        /**UObject
+         * Base Uml Object
          * @constructor
          * @memberof UmlLib
          * @param {Object} params
-         * @param {Object} [params.rendererData] - optional
+         * @param {Object} [params.rd] - optional
          * @param {String} [params.name] - element Name
          * @param {String} [params.stereotype]
          * */
-        UObject:function(params){
-            this.rendererName='BaseObject';
-            this.name="Empty";
-            this.parent=undefined;
-            this.rendererData={};
-            this.leafs = [];
-            this.__init =function(params) {
-                if (params != undefined) {
-                this.rendererData = (params.rendererData || {x: 50, y: 50, width: 150, height: 40});
-                if (params.name != undefined) {
+        UObject: function (params) {
+            this.type = 'BaseObject';
+            this.name = "Empty";
+            this.id = -1;
+            this.__init = function (params) {
+                if (params && params.name) {
                     this.name = params.name;
                 }
-              }
             }
             this.__init(params);
         },
-        Class:function(params){
-          this.rendererName='Class';
+        /**Class
+         * Class Uml Object
+         * @constructor
+         * @param {Object} [params]
+         * @param {String} [params.name] the class name
+         * */
+        Class: function (params) {
+            this.attributes=[];
+            this.type = 'Class';
         },
-        Connector:function(from,to,params){
-            this.rendererName='Connector';
-            this.from = from;
-            this.to = to;
-            this.__init=function(params){
-          }(params);
+        /**Connector
+         * base Uml 1:1 connector
+         * @param {Number} [from] object id
+         * @param {Number} [to] object id
+         * @param {Object} [params] --optional
+         * @param {String} [params.name] element name
+         * */
+        Connector: function (from, to, params) {
+            this.type = 'Connector';
+            if (from)
+                this.from = from.id;
+            if (to)
+                this.to = to.id;
+            this.__init = function (params) {
+            }(params);
         },
-
-        Lifeline:function(params){
-            this.rendererName = 'Lifeline';
+        /**Lifeline
+         * Base uml element for Sequence Diagram
+         * @constructor
+         * @param {Object} [params]
+         * @param {String} [params.name]
+         * */
+        Lifeline: function (params) {
+            this.type = 'Lifeline';
             this.__init(params);
         },
         /**
@@ -428,29 +518,37 @@
          * @param {Object} [params]
          * @param {String} [params.name]
          * */
-        Diagram:function(params){
+        Diagram: function (params) {
             this.name = 'Diagram'
             this.type = 'Base'
+            //Child Element's
             this.leafs = [];
-            this.addObject = function(object){
+            //Layout properties
+            this.lp = [];
+            this.addObject = function (object, gd) {
+                object.id = this.leafs.length;
                 this.leafs.push(object);
+                if(object.type=='Connector'){
+                    this.lp.push({id:this.lp.length});
+                }
+                    this.lp.push(gd || {x: 0, y: 0, width: 100, height: 25,id:this.lp.length});
             };
-            this.__init = function(params){
-                 if(params!=undefined) {
-                     this.name = params.name;
-                 }
+            this.__init = function (params) {
+                if (params != undefined) {
+                    this.name = params.name;
+                }
             };
             this.__init(params);
         },
-        SequenceDiagram:function(params){
+        SequenceDiagram: function (params) {
             this.__init(params);
-            this.type='Sequence';
+            this.type = 'Sequence';
         }
     };
-    var init = function(lib){
+    var init = function (lib) {
         Util.extend(lib.SequenceDiagram, new lib.Diagram());
-        Util.extend(lib.Lifeline,new lib.UObject());
-        Util.extend(lib.Class,new lib.UObject());
+        Util.extend(lib.Lifeline, new lib.UObject());
+        Util.extend(lib.Class, new lib.UObject());
     }(global.UmlLib);
 
 })(this);

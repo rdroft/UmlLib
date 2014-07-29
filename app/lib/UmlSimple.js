@@ -28,7 +28,7 @@ function Diagram(config) {
             this.objects.push(uobject);
         }
     }
-    this.container={};
+    this.container = {};
     this.__init = function (config) {
         var canvas = document.createElement("canvas");
         canvas.width = config.w;
@@ -46,17 +46,17 @@ function Diagram(config) {
         canvas.addEventListener('mousedown', this.mouseDown.bind(this));
         canvas.addEventListener('mouseup', this.mouseUp.bind(this));
         canvas.addEventListener('mousemove', this.mouseMove.bind(this));
-        canvas.addEventListener('dblclick',this.doubleclick.bind(this));
+        canvas.addEventListener('dblclick', this.doubleclick.bind(this));
 
         canvas.addEventListener('mouseover', function (event) {
             console.log('onmouseover' + event);
         }.bind(this));
 
-        canvas.addEventListener('dragstart',function(event){
+        canvas.addEventListener('dragstart', function (event) {
             console.log('drag');
         });
 
-        canvas.addEventListener('dragmove',function(event){
+        canvas.addEventListener('dragmove', function (event) {
             console.log('dragmove');
         });
         this.canvas = canvas;//store ref
@@ -78,83 +78,82 @@ function Diagram(config) {
                 console.log("found x" + this.objects[x].toString());
                 if (point.y > oy & point.y < oyd) {
                     console.log("found x" + this.objects[x].toString());
-                    return {obj:this.objects[x],ox:point.x-ox,oy:point.y-oy,pos:x};
+                    return {obj: this.objects[x], ox: point.x - ox, oy: point.y - oy, pos: x};
                 }
             }
         }
         return null;
     }
 
-    this.sr={};
+    this.sr = {};
     this.mouseDown = function (event) {
         var pos = this.getMousePosition(event);
         var uobj = this.findUObject(pos);
         if (uobj != undefined) {
-            console.log("object selected:"+uobj.obj.id+" pos:"+uobj.pos);
+            console.log("object selected:" + uobj.obj.id + " pos:" + uobj.pos);
             uobj.obj.isDragged = true;
-            this.sr=uobj;
+            this.sr = uobj;
         }
     }
     this.mouseUp = function (event) {
         var pos = this.getMousePosition(event);
         if (this.sr != undefined) {
             this.sr.obj.isDragged = false;
-            this.sr.obj.x = pos.x-this.sr.ox;
-            this.sr.obj.y = pos.y-this.sr.oy;
+            this.sr.obj.x = pos.x - this.sr.ox;
+            this.sr.obj.y = pos.y - this.sr.oy;
             this.draw();
             this.sr.obj.draw(this.ctx);
             this.sr = null;
         }
     }
-        this.doubleclick=function(event){
-            var pos = this.getMousePosition(event);
-            var uobj = this.findUObject(pos);
+    this.doubleclick = function (event) {
+        var pos = this.getMousePosition(event);
+        var uobj = this.findUObject(pos);
 
-            if (uobj != undefined) {
-                console.log("object selected:"+uobj.obj.id+" pos:"+uobj.pos);
-                uobj.obj.isDragged = false;
-                this.sr=uobj;
-                var el=document.createElement('input');
-                el.type='text';
-                el.value=uobj.obj.name;
-                var s = 'position:absolute;'+'top:'+uobj.obj.y+'px;';
-                el.style.position='absolute';
-                el.style.top=uobj.obj.y+'px';
-                el.style.left=uobj.obj.x+'px';
-                el.style.width=uobj.obj.width+'px';
-                el.addEventListener('keyup',function(event){
-                    if(event.keyCode==13||event.which==13){
+        if (uobj != undefined) {
+            console.log("object selected:" + uobj.obj.id + " pos:" + uobj.pos);
+            uobj.obj.isDragged = false;
+            this.sr = uobj;
+            var el = document.createElement('input');
+            el.type = 'text';
+            el.value = uobj.obj.name;
+            var s = 'position:absolute;' + 'top:' + uobj.obj.y + 'px;';
+            el.style.position = 'absolute';
+            el.style.top = uobj.obj.y + 'px';
+            el.style.left = uobj.obj.x + 'px';
+            el.style.width = uobj.obj.width + 'px';
+            el.addEventListener('keyup', function (event) {
+                if (event.keyCode == 13 || event.which == 13) {
 
-                      uobj.obj.name=el.value;
-                      uobj.obj.draw(this.ctx);
-                        console.log("redr");
-                      var cte =  document.getElementById(this.container);
-                        if(cte){
-                            el.somef=true;
-                            cte.removeChild(el);
-                        }
-
+                    uobj.obj.name = el.value;
+                    uobj.obj.draw(this.ctx);
+                    console.log("redr");
+                    var cte = document.getElementById(this.container);
+                    if (cte) {
+                        el.somef = true;
+                        cte.removeChild(el);
                     }
-                }.bind(this));
-                el.addEventListener('blur',function(event){
-                    uobj.obj.name=el.value;
-                    console.log('blur');
-                    if(!el.somef){
+
+                }
+            }.bind(this));
+            el.addEventListener('blur', function (event) {
+                uobj.obj.name = el.value;
+                console.log('blur');
+                if (!el.somef) {
                     document.getElementById(this.container).removeChild(el);
-                    }
-                }.bind(this));
-                document.getElementById(this.container).appendChild(el);
-                el.focus();
-            }
+                }
+            }.bind(this));
+            document.getElementById(this.container).appendChild(el);
+            el.focus();
         }
-
+    }
 
     this.mouseMove = function (event) {
         var pos = this.getMousePosition(event);
-        if (this.sr&&this.sr.obj) {
+        if (this.sr && this.sr.obj) {
             if (this.sr.obj.isDragged == true) {
-                this.sr.obj.x = pos.x-this.sr.ox;
-                this.sr.obj.y = pos.y-this.sr.oy;
+                this.sr.obj.x = pos.x - this.sr.ox;
+                this.sr.obj.y = pos.y - this.sr.oy;
                 this.draw();
                 this.sr.obj.draw(this.ctx);
             }
@@ -226,27 +225,27 @@ function LifeLine(config) {
     this.__init(config);
     this.draw = function (ctx) {
         //ctx.fillStyle = this.colour;
-        ctx.fillStyle     = DiagramColours.scheme1.background;
-        ctx.shadowEnabled=false;
-        ctx.shadowBlur=0;
-        ctx.shadowColor=DiagramColours.scheme1.background;
+        ctx.fillStyle = DiagramColours.scheme1.background;
+        ctx.shadowEnabled = false;
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = DiagramColours.scheme1.background;
         ctx.fillRect(this.x, this.y, this.width, this.boxHeight);
         this.drawName(ctx);
 
         ctx.strokeStyle = "#a00000";
         //ctx.fillRect(this.x, this.y, this.width, this.boxHeight);
-        ctx.shadowOffsetX=3;
-        ctx.shadowOffsetY=3;
-        ctx.shadowBlur    = 4;
-        ctx.shadowColor   = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillStyle     = '#00f';
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 3;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillStyle = '#00f';
         ctx.strokeRect(this.x, this.y, this.width, this.boxHeight);
 
         ctx.beginPath();
         ctx.moveTo(this.x + (this.width / 2), this.y + this.boxHeight);
         ctx.lineTo(this.x + (this.width / 2), this.height);
         ctx.stroke();
-      //  console.log("real draw: x:" + this.x + " y:" + this.y + " w:" + this.width + " h:" + this.height);
+        //  console.log("real draw: x:" + this.x + " y:" + this.y + " w:" + this.width + " h:" + this.height);
     }
 }
 

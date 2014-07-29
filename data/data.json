@@ -1,0 +1,192 @@
+{"name": "A1", "type": "Base", "leafs": [
+    {
+        "type": "BaseObject",
+        "name": "Main Object",
+        "id": 0
+    },
+    {
+        "type": "BaseObject",
+        "name": "Child Object 2",
+        "id": 1
+    },
+    {
+        "type": "BaseObject",
+        "name": "Child Object 1",
+        "id": 2
+    },
+    {
+        "type": "BaseObject",
+        "name": "Child",
+        "id": 3
+    },
+    {
+        "type": "BaseObject",
+        "name": "Super",
+        "id": 4
+    },
+    {
+        "type": "BaseObject",
+        "name": "Line Ojb",
+        "id": 5
+    },
+    {
+        "type": "BaseObject",
+        "name": "Line Ojb1",
+        "id": 6
+    },
+    {
+        "type": "Connector",
+        "from": 0,
+        "to": 3,
+        "id": 7
+    },
+    {
+        "type": "Connector",
+        "from": 0,
+        "to": 1,
+        "id": 8
+    },
+    {
+        "type": "Connector",
+        "from": 0,
+        "to": 2,
+        "id": 9
+    },
+    {
+        "type": "Connector",
+        "from": 4,
+        "to": 0,
+        "id": 10
+    },
+    {
+        "type": "Connector",
+        "from": 0,
+        "to": 4,
+        "id": 11
+    },
+    {
+        "type": "Connector",
+        "from": 0,
+        "to": 5,
+        "id": 12
+    },
+    {
+        "type": "Connector",
+        "from": 0,
+        "to": 6,
+        "id": 13
+    }
+], "lp": [
+    {
+        "x": 321,
+        "y": 229,
+        "width": 123,
+        "height": 53
+    },
+    {
+        "x": 150,
+        "y": 125,
+        "width": 123,
+        "height": 23
+    },
+    {
+        "x": 187,
+        "y": 363,
+        "width": 123,
+        "height": 23
+    },
+    {
+        "x": 355,
+        "y": 150,
+        "width": 123,
+        "height": 23
+    },
+    {
+        "x": 500,
+        "y": 300,
+        "width": 123,
+        "height": 23
+    },
+    {
+        "x": 550,
+        "y": 50,
+        "width": 100,
+        "height": 50
+    },
+    {
+        "x": 400,
+        "y": 85,
+        "width": 100,
+        "height": 50
+    },
+    {
+        "id": 7
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 8
+    },
+    {
+        "id": 9
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 10
+    },
+    {
+        "id": 11
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 12
+    },
+    {
+        "id": 13
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 14
+    },
+    {
+        "id": 15
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 16
+    },
+    {
+        "id": 17
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 18
+    },
+    {
+        "id": 19
+    },
+    {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 25,
+        "id": 20
+    }
+]}
